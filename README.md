@@ -13,17 +13,17 @@ More details on how to setup Harbor with SSL certificate using openssl are discu
 ### Environment:
 
 ```shell
-Distribution: Ubuntu 16.04 Desktop
-fqdn: registry-srv.codedevops.com
+Distribution: Ubuntu 22.04 Desktop
+fqdn: calmix-harbor-registry.emea.nutanix.com
 ```
 
 ### Install Docker:
 
 ```shell
-stalin@registry-srv:~$ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-stalin@registry-srv:~$ sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-stalin@registry-srv:~$ sudo apt-get update
-stalin@registry-srv:~$ sudo apt-get install -y docker-ce
+$ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+$ sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+$ sudo apt-get update
+$ sudo apt-get install -y docker-ce
 
 ```
 
@@ -48,9 +48,9 @@ Example output:
 ### Download docker-compose binary
 
 ```shell
-stalin@registry-srv:~$ sudo curl -L "https://github.com/docker/compose/releases/download/1.25.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-stalin@registry-srv:~$ sudo chmod +x /usr/local/bin/docker-compose
-stalin@registry-srv:~$ sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+$ sudo curl -L "https://github.com/docker/compose/releases/download/1.25.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+$ sudo chmod +x /usr/local/bin/docker-compose
+$ sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
 ```
 
 ### Setup Certificates
@@ -58,16 +58,16 @@ stalin@registry-srv:~$ sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-
 Create a staging directory first to organize the certificates
 
 ```shell
-stalin@registry-srv:~$ mkdir ~/harbor_certs/
-stalin@registry-srv:~$ cd ~/harbor_certs/
+$ mkdir ~/harbor_certs/
+$ cd ~/harbor_certs/
 ```
 
 Create CA
 
 ```shell
-stalin@registry-srv:~$ openssl genrsa -out ca.key 4096
-stalin@registry-srv:~$ openssl req -x509 -new -nodes -sha512 -days 3650 \
- -subj "/C=IN/ST=Kerala/L=Chalakudy/O=demo/OU=Personal/CN=ca.codedevops.com" \
+$ openssl genrsa -out ca.key 4096
+$ openssl req -x509 -new -nodes -sha512 -days 3650 \
+ -subj "/C=IN/ST=Kerala/L=Chalakudy/O=demo/OU=Personal/CN=ca.emea.nutanix.com" \
  -key ca.key \
  -out ca.crt
 ```
@@ -75,7 +75,7 @@ stalin@registry-srv:~$ openssl req -x509 -new -nodes -sha512 -days 3650 \
 Create SSL extension file
 
 ```shell
-stalin@registry-srv:~$ cat > v3.ext <<-EOF
+$ cat > v3.ext <<-EOF
 authorityKeyIdentifier=keyid,issuer
 basicConstraints=CA:FALSE
 keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
@@ -83,68 +83,70 @@ extendedKeyUsage = serverAuth
 subjectAltName = @alt_names
 
 [alt_names]
-DNS.1=codedevops.com
-DNS.2=registry-srv.codedevops.com
-DNS.3=registry-srv
+DNS.1=emea.nutanix.com
+DNS.2=calmix-harbor-registry.emea.nutanix.com
+DNS.3=calmix-harbor-registry
 EOF
 ```
 
 Create a Certificate Signing Request(CSR) for Harbor’s nginx service
 
 ```shell
-stalin@registry-srv:~$ openssl genrsa -out registry-srv.codedevops.com.key 4096
-stalin@registry-srv:~$ openssl req -sha512 -new \
-    -subj "/C=IN/ST=Kerala/L=Chalakudy/O=demo/OU=Personal/CN=registry-srv.codedevops.com" \
-    -key registry-srv.codedevops.com.key \
-    -out registry-srv.codedevops.com.csr
+$ openssl genrsa -out registry-srv.codedevops.com.key 4096
+$ openssl req -sha512 -new \
+    -subj "/C=IN/ST=Kerala/L=Chalakudy/O=demo/OU=Personal/CN=calmix-harbor-registry.emea.nutanix.com" \
+    -key calmix-harbor-registry.emea.nutanix.com.key \
+    -out calmix-harbor-registry.emea.nutanix.com.csr
 ```
 
 Generate and Sign Certificates
 
 ```shell
-stalin@registry-srv:~$ openssl x509 -req -sha512 -days 3650 \
+openssl x509 -req -sha512 -days 3650 \
     -extfile v3.ext \
     -CA ca.crt -CAkey ca.key -CAcreateserial \
-    -in registry-srv.codedevops.com.csr \
-    -out registry-srv.codedevops.com.crt
+    -in calmix-harbor-registry.emea.nutanix.com.csr \
+    -out calmix-harbor-registry.emea.nutanix.com.crt
 ```
 
 After signing , we will get output like below
 
 ```shell
 Signature ok
-subject=/C=IN/ST=Kerala/L=Chalakudy/O=demo/OU=Personal/CN=registry-srv.codedevops.com
-Getting CA Private Key
+subject=/C=IN/ST=Kerala/L=Chalakudy/O=demo/OU=Personal/CN=harbor-registry.emea.nutanix.com.crt
 ```
 
 Create certificate directory for harbor
 
 ```shell
-stalin@registry-srv:~$ sudo mkdir -p /data/cert/
-stalin@registry-srv:~$ sudo cp  registry-srv.codedevops.com.crt registry-srv.codedevops.com.key /data/cert/
+$ sudo mkdir -p /data/cert/
+$ sudo cp  harbor-registry.emea.nutanix.com.crt harbor-registry.emea.nutanix.com.key /data/cert/
 ```
 
 ### Download Harbor offline installer.
 
 ```shell
-stalin@registry-srv:~$ sudo curl https://storage.googleapis.com/harbor-releases/release-1.7.0/harbor-offline-installer-v1.7.1.tgz -O
-stalin@registry-srv:~$ tar -xvf harbor-offline-installer-v1.7.1.tgz
+$ sudo curl https://github.com/goharbor/harbor/releases/download/v2.6.0/harbor-offline-installer-v2.6.0.tgz -O
+$ tar -xvf harbor-offline-installer-v2.6.0.tgz
 ```
 
 Configure Harbor
 
 ```shell
-stalin@registry-srv:~$ cd harbor
-stalin@registry-srv:~$ sudo sed -i 's/hostname = reg.mydomain.com/hostname = registry-srv.codedevops.com/' harbor.cfg
-stalin@registry-srv:~$ sudo sed -i 's/ssl_cert = \/data\/cert\/server.crt/ssl_cert = \/data\/cert\/registry-srv.codedevops.com.crt/' harbor.cfg
-stalin@registry-srv:~$ sudo sed -i 's/ssl_cert_key = \/data\/cert\/server.key/ssl_cert_key = \/data\/cert\/registry-srv.codedevops.com.key/' harbor.cfg
-stalin@registry-srv:~$ sudo sed -i 's/ui_url_protocol = http/ui_url_protocol = https/' harbor.cfg
+$ cd harbor
+$ cp harbor.yml.tmpl harbor.yml
+$ vi harbor.yml
+Search and edit hostname, certificate and private_key :
+hostname: calmix-harbor-registry.emea.nutanix.com
+  certificate: /data/cert/calmix-harbor-registry.emea.nutanix.com.crt
+  private_key: /data/cert/calmix-harbor-registry.emea.nutanix.com.key
 ```
 
 Install Harbor & Start Harbor.
 
 ```shell
-stalin@registry-srv:~$ sudo ./install.sh --with-notary --with-clair --with-chartmuseum
+$ sudo ./prepare
+$ sudo ./install.sh --with-notary 
 ```
 
 You should be able to see a successful reposnse as such:
@@ -240,23 +242,22 @@ Also , you can use docker-compose to verify the health of containers
 
 
 ```shell
-stalin@registry-srv:~$ sudo docker-compose ps
-      Name                     Command                  State                                      Ports
----------------------------------------------------------------------------------------------------------------------------------------
-chartmuseum         ./docker-entrypoint.sh           Up (healthy)   9999/tcp
-clair               ./docker-entrypoint.sh           Up (healthy)   6060/tcp, 6061/tcp
-clair-adapter       /clair-adapter/clair-adapter     Up (healthy)   8080/tcp
-harbor-core         /harbor/harbor_core              Up (healthy)
-harbor-db           /docker-entrypoint.sh            Up (healthy)   5432/tcp
-harbor-jobservice   /harbor/harbor_jobservice  ...   Up (healthy)
+~$ sudo docker-compose ps
+      Name                     Command                  State                                                  Ports
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+harbor-core         /harbor/entrypoint.sh            Up (healthy)
+harbor-db           /docker-entrypoint.sh 96 13      Up (healthy)
+harbor-jobservice   /harbor/entrypoint.sh            Up (healthy)
 harbor-log          /bin/sh -c /usr/local/bin/ ...   Up (healthy)   127.0.0.1:1514->10514/tcp
-harbor-portal       nginx -g daemon off;             Up (healthy)   8080/tcp
-nginx               nginx -g daemon off;             Up (healthy)   0.0.0.0:4443->4443/tcp, 0.0.0.0:80->8080/tcp, 0.0.0.0:443->8443/tcp
+harbor-portal       nginx -g daemon off;             Up (healthy)
+nginx               nginx -g daemon off;             Up (healthy)   0.0.0.0:4443->4443/tcp,:::4443->4443/tcp, 0.0.0.0:80->8080/tcp,:::80->8080/tcp,
+                                                                    0.0.0.0:443->8443/tcp,:::443->8443/tcp
 notary-server       /bin/sh -c migrate-patch - ...   Up
 notary-signer       /bin/sh -c migrate-patch - ...   Up
-redis               redis-server /etc/redis.conf     Up (healthy)   6379/tcp
-registry            /home/harbor/entrypoint.sh       Up (healthy)   5000/tcp
+redis               redis-server /etc/redis.conf     Up (healthy)
+registry            /home/harbor/entrypoint.sh       Up (healthy)
 registryctl         /home/harbor/start.sh            Up (healthy)
+
 ```
 
 You should be able to now access the Harbor UI by using the following link: [https://registry-srv.codedevops.com](https://registry-srv.codedevops.com). Ensure DNS/host file entries are made. Else, use the IP address of the Harbor registry server as such: [https://10.60.99.82](https://10.60.99.82).
