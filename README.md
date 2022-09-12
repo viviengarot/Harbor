@@ -303,7 +303,7 @@ From there, click on `Members` and then selects `+Users`.
 
 Give the user Developer Role and click on `OK`. You should be able to see the user added to the list:
 
-![library](harbor/assets/images/library.png)
+![image](https://user-images.githubusercontent.com/58295873/189600967-e5825b4a-733d-4590-a014-332dba1d279f.png)
 
 Going forward we can use this account to push images to private registry.
 
@@ -478,7 +478,7 @@ Successfully submitted request to add private registry config "harbor" to k8s cl
 
 For the k8s cluster to consume docker image, you need to push images to the docker private registry. To do this you must be first authenticated with the Harbon private registry. 
 
-Add the harbor docker certs at OS level of the development machine you'll be using to push the docker image to the Harbor registry (I have used PC) :
+Add the harbor docker certs to local docker of the development machine you'll be using to push the docker image to the Harbor registry (I have used PC) :
 
 ```shell
 nutanix@NTNX-10-66-40-104-A-PCVM:~$ mkdir /etc/docker/certs.d/calmix-harbor-registry.emea.nutanix.com
@@ -487,7 +487,6 @@ nutanix@NTNX-10-66-40-104-A-PCVM:~$ update-ca-certificates
 ```
 
 Login to Harbor private registry :
-
 
 ```shell
 nutanix@NTNX-10-66-40-104-A-PCVM:~$ docker login calmix-harbor-registry.emea.nutanix.com -u vivien
@@ -545,12 +544,20 @@ You should be ready to consume this image with Karbon k8s cluster.
 
 ### Harbor configuration inside k8s cluster:
 
-For docker to start using the Harbor private registry in a secure manner and pull images, you need to create a `docker-registry` secret within Kubernetes. To do this run the below command on the k8s master node:
+For docker to start using the Harbor private registry in a secure manner and pull images, there is no need to create a `docker-registry` secret within Kubernetes.
+
+Starting Karbon 2.5 and use of containerd as CNI, registries conf are present on the karbon cluster nodes at /etc/containerd/certs.d/*
 
 ```shell
-[nutanix@viv-6e0153-master-0 ~]$ kubectl create secret docker-registry regcred --docker-server=calmix-harbor-registry.emea.nutanix.com --docker-username=vivien --docker-password=Nutanix/4u
-secret/regcred created
+sudo cat /etc/containerd/certs.d/calmix-harbor-registry.emea.nutanix.com/hosts.toml
+server = "calmix-harbor-registry.emea.nutanix.com"
+
+[host."calmix-harbor-registry.emea.nutanix.com"]
+  plain_http = false
+  skip_verify = false
+  ca = "registry.crt"
 ```
+
 You are all set to start using images from Harbor private registry. All that's left is to use the image with the pod manifest file as below: 
 
 ```shell
@@ -564,9 +571,6 @@ spec:
   containers:
   - name: nginx-priv-container
     image: calmix-harbor-registry.emea.nutanix.com/library/vivien/nginx
-  imagePullSecrets:
-  - name: regcred
-
 ```
 
 Run the `kubectl create` command to create the pod:
@@ -582,16 +586,4 @@ You would shortly see the pod in `Running` state:
 [nutanix@viv-6e0153-master-0 ~]$ kubectl get pods -n viv
 NAME         READY   STATUS    RESTARTS   AGE
 nginx-priv   1/1     Running   0          2d9h
-```
-
-Starting Karbon 2.5 and use of containerd as CNI, registries conf are present on the karbon cluster nodes at /etc/containerd/certs.d/*
-
-```shell
-sudo cat /etc/containerd/certs.d/calmix-harbor-registry.emea.nutanix.com/hosts.toml
-server = "calmix-harbor-registry.emea.nutanix.com"
-
-[host."calmix-harbor-registry.emea.nutanix.com"]
-  plain_http = false
-  skip_verify = false
-  ca = "registry.crt"
 ```
