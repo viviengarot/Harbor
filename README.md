@@ -260,7 +260,7 @@ registryctl         /home/harbor/start.sh            Up (healthy)
 
 ```
 
-You should be able to now access the Harbor UI by using the following link: [https://registry-srv.codedevops.com](https://registry-srv.codedevops.com). Ensure DNS/host file entries are made. Else, use the IP address of the Harbor registry server as such: [https://10.60.99.82](https://10.60.99.82).
+You should be able to now access the Harbor UI by using the following link: [https://calmix-harbor-registry.emea.nutanix.com](https://calmix-harbor-registry.emea.nutanix.comm). Ensure DNS/host file entries are made. Else, use the IP address of the Harbor registry server as such: [https://10.66.42.22](https://10.66.42.22).
 
 **NOTE:** **Punch in the IP address that you have used for your setup. The above IP is what I have used in my setup.**
 
@@ -286,11 +286,11 @@ Create User:
 
 Fill the user details and set password for the account:
 
-![newUser](harbor/assets/images/newUser.png)
+![image](https://user-images.githubusercontent.com/58295873/189594616-6c9b8596-3d18-49b8-8f7e-c1c9245b7454.png)
 
 Once you click on `OK` you should be able to list the user.
 
-![users](harbor/assets/images/users.png)
+![image](https://user-images.githubusercontent.com/58295873/189594723-13dc72e8-4e9d-4e87-abc4-92851553da9e.png)
 
 
 Add user to the library project.
@@ -312,41 +312,40 @@ Going forward we can use this account to push images to private registry.
 With the already generated CA certificate, we will generate docker client certificates to use with Karbon Kubernetes cluster. So login back to your Harbor server again and move to the directory where the CA certificates are present. In our case:
 
 ```shell
-stalin@registry-srv:~$ cd ~/harbor_certs/
+$ cd ~/harbor_certs/
 ```
 
 Generate a CSR for docker and get it signed for the client
 
 ```shell
-stalin@registry-srv:~$ openssl genrsa -out docker-client.codedevops.com.key 4096
-stalin@registry-srv:~$ openssl req -sha512 -new \
-    -subj "/C=IN/ST=Kerala/L=Chalakudy/O=demo/OU=Personal/CN=docker-client.codedevops.com" \
-    -key docker-client.codedevops.com.key \
-    -out docker-client.codedevops.com.csr
+$ openssl genrsa -out docker-client.emea.nutanix.com.key 4096
+$ openssl req -sha512 -new \
+    -subj "/C=IN/ST=Kerala/L=Chalakudy/O=demo/OU=Personal/CN=docker-client.emea.nutanix.com" \
+    -key docker-client.emea.nutanix.com.key \
+    -out docker-client.emea.nutanix.com.csr
 ```
 
 Sign Certificates
 
 ```shell
-stalin@registry-srv:~$ openssl x509 -req -sha512 -days 3650 \
+$ openssl x509 -req -sha512 -days 3650 \
     -extfile v3.ext \
     -CA ca.crt -CAkey ca.key -CAcreateserial \
-    -in docker-client.codedevops.com.csr \
-    -out docker-client.codedevops.com.crt
+    -in docker-client.emea.nutanix.com.csr \
+    -out docker-client.emea.nutanix.com.crt
 ```
 
 You will get an output like below:
 
 ```shell
 Signature ok
-subject=/C=IN/ST=Kerala/L=Chalakudy/O=demo/OU=Personal/CN=docker-client.codedevops.com
-Getting CA Private Key
+subject=/C=IN/ST=Kerala/L=Chalakudy/O=demo/OU=Personal/CN=docker-client.emea.nutanix.com
 ```
 
 Docker needs the certificate in PEM format , so lets convert the client certificate.
 
 ```shell
-stalin@registry-srv:~$ openssl x509 -inform PEM -in docker-client.codedevops.com.crt -out docker-client.codedevops.com.cert
+$ openssl x509 -inform PEM -in docker-client.emea.nutanix.com.crt -out docker-client.emea.nutanix.com.cert
 ```
 
 From here, copy the below files to the PC VM:
@@ -368,43 +367,15 @@ For the Karbon Kubernetes clusters to use the Harbor private registry, you need 
 You need to login to Karbon from CLI first to start using karbonctl on the PC VM:
 
 ```shell
-nutanix@NTNX-10-68-97-150-A-PCVM:~$ cd karbon
-nutanix@NTNX-10-68-97-150-A-PCVM:~/karbon$ ./karbonctl login --pc-username stalin.stepin@emeagso.lab
-Please enter the password for the PC user: stalin.stepin@emeagso.lab
+nutanix@NTNX-10-66-40-104-A-PCVM:~$ cd karbon
+nnutanix@NTNX-10-66-40-104-A-PCVM:~$ ./karbonctl login --pc-username admin
+Please enter the password for the PC user: admin
 Login successful
-```
-
-### Karbon configuration:
-
-Though Karbon supports basic and certificate based authentication, it does not support token based authentication yet. Unfortunately, docker uses token based authentication by default when making an API call to connect to private registry. Hence, unless we ask Karbon to skip this pre-check, the private registry addition task will continue to fail.
-
-To skip this pre-check, you need to do the below:
-
-```shell
-nutanix@NTNX-10-68-97-150-A-PCVM:~$ sudo vim /home/docker/karbon_core/karbon_core_config.json
-``` 
-
-Add the following `"-skip-post-private-registry-prechecks"` to the entry_point section of the file:
-
-```shell
-"image": "karbon-core:v2.2.2",
-"entry_point": [
-        "/karbon",
-        "-debug=true",
-        "-v=4",
-        "-logtostderr",
-        "-skip-post-private-registry-prechecks"
-```
-
-Restart `karbon_core` docker container on PC VM to reflect the changes:
-
-```shell
-nutanix@NTNX-10-68-97-150-A-PCVM:~/karbon$ genesis stop karbon_core; cluster start
 ```
 
 ###Docker Client Certificate:
 
-Next, you need to concatenate the `docker-client.codedevops.com.cert` with the `ca.crt` content as docker expects the complete chain. To do this, open `docker-client.codedevops.com.cert` and add `ca.crt` contents to it. The `docker-client.codedevops.com.cert` certificate should finally look like the below:
+Next, you need to concatenate the `docker-client.emea.nutanix.com.cert` with the `ca.crt` content as docker expects the complete chain. To do this, open `docker-client.emea.nutanix.com.cert` and append `ca.crt` contents to it. The `docker-client.emea.nutanix.com.cert` certificate should finally look like the below:
 
 ```shell
 nutanix@NTNX-10-68-97-150-A-PCVM:~/k8s-harbor-registry.codedevops.com$ cat docker-client.codedevops.com.cert
@@ -483,7 +454,8 @@ mH0IOcHjqDqAqX2G7eUCC/BZfbuGkQk8ra/oMGyt4VtXtmb9QxzGQyHL64d51vhR
 You should now have everything to configure the Harbor private registry with Karbon. Simply fire the below command to add private registry with Karbon:
 
 ```shell
-nutanix@NTNX-10-68-97-150-A-PCVM:~/karbon$ ./karbonctl registry add --name harbor --url registry-srv.codedevops.com --username admin --password Harbor12345 --cert-file /home/nutanix/k8s-harbor-registry.codedevops.com/docker-client.codedevops.com.cert
+nutanix@NTNX-10-66-40-104-A-PCVM:~$ ./karbonctl registry add --name harbor --url calmix-harbor-registry.emea.nutanix.com --username admin --password Harbor12345 --cert-file /home/nutanix/harbor-registry-certs/docker-client.emea.nutanix.com.cert
+
 Successfully add private registry to Karbon: [POST /karbon/v1-alpha.1/registries][202] postPrivateRegistryAccepted  &{Endpoint:0xc000516050 Name:0xc000516070 UUID:0xc000516080}
 ```
 
@@ -492,28 +464,35 @@ Verify, if the addition was successful:
 ```shell
 nutanix@NTNX-10-68-97-150-A-PCVM:~/karbon$ ./karbonctl registry list
 Name      UUID                                    Endpoint
-harbor    ae213544-5a16-44d7-760c-d1aa46639e1e    registry-srv.codedevops.com
+harbor    ae213544-5a16-44d7-760c-d1aa46639e1e    calmix-harbor-registry.emea.nutanix.com
 ```
 
 You need to now integrate the Karbon Kubernetes cluster with Harbor registry using the below method:
 
 ```shell
-nutanix@NTNX-10-68-97-150-A-PCVM:~/karbon$ ./karbonctl cluster registry add --cluster-name stalin-k8s-1 --registry-name harbor
-Successfully submitted request to add private registry config "harbor" to k8s cluster "stalin-k8s-1": Task UUID: 951ee151-a946-4173-8df3-9c9d4734f7c2
+nutanix@NTNX-10-66-40-104-A-PCVM:~$ ./karbonctl cluster registry add --cluster-name viv --registry-name harbor
+Successfully submitted request to add private registry config "harbor" to k8s cluster "viv": Task UUID: 951ee151-a946-4173-8df3-9c9d4734f7c2
 ```
 
 ### Docker image operation on Harbor
 
 For the k8s cluster to consume docker image, you need to push images to the docker private registry. To do this you must be first authenticated with the Harbon private registry. 
 
-Login to Harbor private registry from development machine which has internet access:
+Add the harbor docker certs at OS level of the development machine you'll be using to push the docker image to the Harbor registry (I have used PC) :
+
+```shell
+nutanix@NTNX-10-66-40-104-A-PCVM:~$ mkdir /etc/docker/certs.d/calmix-harbor-registry.emea.nutanix.com
+nutanix@NTNX-10-66-40-104-A-PCVM:~$ cp /home/nutanix/harbor-registry-certs/* /etc/docker/certs.d/calmix-harbor-registry.emea.nutanix.com
+nutanix@NTNX-10-66-40-104-A-PCVM:~$ update-ca-certificates
+```
+
+Login to Harbor private registry :
 
 
 ```shell
-[stalin@devbox ~]$ sudo docker login registry-srv.codedevops.com
-Username: stalin
+nutanix@NTNX-10-66-40-104-A-PCVM:~$ docker login calmix-harbor-registry.emea.nutanix.com -u vivien
 Password:
-WARNING! Your password will be stored unencrypted in /root/.docker/config.json.
+WARNING! Your password will be stored unencrypted in /home/nutanix/.docker/config.json.
 Configure a credential helper to remove this warning. See
 https://docs.docker.com/engine/reference/commandline/login/#credentials-store
 
@@ -523,46 +502,44 @@ Login Succeeded
 Pull nginx docker image from the internet using the below command:
 
 ```shell
-[stalin@devbox ~]$ docker pull nginx
-Using default tag: latest
-Got permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Post http://%2Fvar%2Frun%2Fdocker.sock/v1.39/images/create?fromImage=nginx&tag=latest: dial unix /var/run/docker.sock: connect: permission denied
-[nutanix@karbon-stalin-k8s-1-088899-k8s-master-0 ~]$ sudo docker pull nginx
+nutanix@NTNX-10-66-40-104-A-PCVM:~$ docker pull nginx
 Using default tag: latest
 latest: Pulling from library/nginx
-b4d181a07f80: Pull complete
-edb81c9bc1f5: Pull complete
-b21fed559b9f: Pull complete
-apiVersion: v1
-03e6a2452751: Pull complete
-b82f7f888feb: Pull complete
-5430e98eba64: Pull complete
-Digest: sha256:47ae43cdfc7064d28800bc42e79a429540c7c80168e8c8952778c0d5af1c09db
+7a6db449b51b: Pull complete
+ca1981974b58: Pull complete
+d4019c921e20: Pull complete
+7cb804d746d4: Pull complete
+e7a561826262: Pull complete
+7247f6e5c182: Pull complete
+Digest: sha256:b95a99feebf7797479e0c5eb5ec0bdfa5d9f504bc94da550c2f58e839ea6914f
 Status: Downloaded newer image for nginx:latest
+docker.io/library/nginx:latest
+
 ```
 
 Tag the downloaded image with the harbor private registry details:
 
 ```shell
-[stalin@devbox ~]$ sudo docker tag nginx:latest registry-srv.codedevops.com/library/stalin/nginx:latest
+nutanix@NTNX-10-66-40-104-A-PCVM:~$ sudo docker tag nginx:latest calmix-harbor-registry.emea.nutanix.com/library/vivien/nginx:latest
 ```
 
 Push the image to Harbor private registry:
 
 ```shell
-[stalin@devbox ~]$ sudo docker push registry-srv.codedevops.com/library/stalin/nginx
-The push refers to repository [registry-srv.codedevops.com/library/stalin/nginx]
-c6d74dcb7fe7: Pushed
-b50a193ebf2e: Pushed
-165eb6c3c0d3: Pushed
-cf388fcf3527: Pushed
-2418679ca01f: Pushed
-764055ebc9a7: Pushed
-latest: digest: sha256:2f1cd90e00fe2c991e18272bb35d6a8258eeb27785d121aa4cc1ae4235167cfd size: 1570
+nutanix@NTNX-10-66-40-104-A-PCVM:~$ docker push calmix-harbor-registry.emea.nutanix.com/library/vivien/nginx:latest
+The push refers to repository [calmix-harbor-registry.emea.nutanix.com/library/vivien/nginx]
+73993eeb8aa2: Layer already exists
+2c31eef17db8: Layer already exists
+7b9055fc8058: Layer already exists
+04ab349b7b3b: Layer already exists
+226117031573: Layer already exists
+6485bed63627: Layer already exists
+latest: digest: sha256:89020cd33be2767f3f894484b8dd77bc2e5a1ccc864350b92c53262213257dfc size: 1570
 ```
 
 You would be able to see this image on Harbor private registry:
 
-![nginx](harbor/assets/images/nginx.png)
+![image](https://user-images.githubusercontent.com/58295873/189598719-35c06c68-48d5-49ea-a5e5-dd5f97fbee4b.png)
 
 You should be ready to consume this image with Karbon k8s cluster.
 
@@ -571,37 +548,50 @@ You should be ready to consume this image with Karbon k8s cluster.
 For docker to start using the Harbor private registry in a secure manner and pull images, you need to create a `docker-registry` secret within Kubernetes. To do this run the below command on the k8s master node:
 
 ```shell
-[nutanix@karbon-stalin-k8s-1-088899-k8s-master-0 ~]$ kubectl create secret docker-registry regcred --docker-server=registry-srv.codedevops.com --docker-username=stalin --docker-password=Nutanix/4u
+[nutanix@viv-6e0153-master-0 ~]$ kubectl create secret docker-registry regcred --docker-server=calmix-harbor-registry.emea.nutanix.com --docker-username=vivien --docker-password=Nutanix/4u
 secret/regcred created
 ```
 You are all set to start using images from Harbor private registry. All that's left is to use the image with the pod manifest file as below: 
 
 ```shell
-[nutanix@karbon-stalin-k8s-1-088899-k8s-master-0 ~]$ cat nginx.yaml
+[nutanix@viv-6e0153-master-0 ~]$ cat nginx3.yaml
 apiVersion: v1
 kind: Pod
 metadata:
   name: nginx-priv
+  namespace : viv
 spec:
   containers:
   - name: nginx-priv-container
-    image: registry-srv.codedevops.com/library/stalin/nginx
+    image: calmix-harbor-registry.emea.nutanix.com/library/vivien/nginx
   imagePullSecrets:
   - name: regcred
+
 ```
 
 Run the `kubectl create` command to create the pod:
 
 ```shell
-[nutanix@karbon-stalin-k8s-1-088899-k8s-master-0 ~]$ kubectl create -f nginx.yaml
+[nutanix@viv-6e0153-master-0 ~]$ kubectl create -f nginx3.yaml
 pod/nginx-priv created
 ```
 
 You would shortly see the pod in `Running` state:
 
 ```shell
-[nutanix@karbon-stalin-k8s-1-088899-k8s-master-0 ~]$ kubectl get pods
-NAME                      READY   STATUS    RESTARTS   AGE
-nginx-priv                1/1     Running   0          5s
-nginx3-6f86f99744-n2s4j   1/1     Running   0          8d
+[nutanix@viv-6e0153-master-0 ~]$ kubectl get pods -n viv
+NAME         READY   STATUS    RESTARTS   AGE
+nginx-priv   1/1     Running   0          2d9h
+```
+
+Starting Karbon 2.5 and use of containerd as CNI, registries conf are present on the karbon cluster nodes at /etc/containerd/certs.d/*
+
+```shell
+sudo cat /etc/containerd/certs.d/calmix-harbor-registry.emea.nutanix.com/hosts.toml
+server = "calmix-harbor-registry.emea.nutanix.com"
+
+[host."calmix-harbor-registry.emea.nutanix.com"]
+  plain_http = false
+  skip_verify = false
+  ca = "registry.crt"
 ```
