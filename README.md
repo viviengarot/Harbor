@@ -544,9 +544,9 @@ You should be ready to consume this image with Karbon k8s cluster.
 
 ### Harbor configuration inside k8s cluster:
 
-For docker to start using the Harbor private registry in a secure manner and pull images, there is no need to create a `docker-registry` secret within Kubernetes.
+For docker to start using the Harbor private registry in a secure manner and pull images, there is no need to create a `docker-registry` secret within Kubernetes anymore.
 
-Starting Karbon 2.5 and use of containerd as CNI, registries conf are present on the karbon cluster nodes at /etc/containerd/certs.d/*
+Starting Karbon 2.5 and use of containerd as container engine, registries configuration are present on the karbon cluster nodes at /etc/containerd/certs.d/*
 
 ```shell
 sudo cat /etc/containerd/certs.d/calmix-harbor-registry.emea.nutanix.com/hosts.toml
