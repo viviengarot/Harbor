@@ -260,7 +260,7 @@ registryctl         /home/harbor/start.sh            Up (healthy)
 
 ```
 
-You should be able to now access the Harbor UI by using the following link: [https://calmix-harbor-registry.emea.nutanix.com](https://calmix-harbor-registry.emea.nutanix.comm). Ensure DNS/host file entries are made. Else, use the IP address of the Harbor registry server as such: [https://10.66.42.22](https://10.66.42.22).
+You should be able to now access the Harbor UI by using the following link: [https://calmix-harbor-registry.emea.nutanix.com](https://calmix-harbor-registry.emea.nutanix.com). Ensure DNS/host file entries are made. Else, use the IP address of the Harbor registry server as such: [https://10.66.42.22](https://10.66.42.22).
 
 **NOTE:** **Punch in the IP address that you have used for your setup. The above IP is what I have used in my setup.**
 
